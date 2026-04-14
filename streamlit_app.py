@@ -232,7 +232,7 @@ st.markdown(
 with st.form(key="feedback_form"):
     name = st.text_input(
         "Your name",
-        placeholder="e.g. Jane Doe",
+        placeholder="e.g. John Smith",
         max_chars=100,
     )
 
@@ -300,30 +300,33 @@ if submitted:
         if rating <= 2:
             st.markdown(
                 '<div class="alert-box alert-warning">'
-                "⚠️ We're sorry to hear that. We'll work hard to improve your experience!"
+                "We're sorry to hear that. We'll work hard to improve your experience!"
                 "</div>",
                 unsafe_allow_html=True,
             )
+            st.markdown("---")
             st.warning(
                 "Your satisfaction score is low. "
-                "We take this seriously and will follow up."
+                "We are working on it."
             )
         elif rating >= 4:
             st.markdown(
                 '<div class="alert-box alert-success">'
-                "🎉 Awesome! We're thrilled you had a great experience!"
+                "Awesome! We're thrilled you had a great experience!"
                 "</div>",
                 unsafe_allow_html=True,
             )
+            st.markdown("---")
             st.success("Thank you for the positive feedback! 🙌")
         else:
             # rating == 3  →  neutral acknowledgement
             st.markdown(
                 '<div class="alert-box alert-neutral">'
-                "💬 Thanks for sharing. We'd love to know how we can do even better."
+                "Thanks for sharing. We'd love to know how we can do even better."
                 "</div>",
                 unsafe_allow_html=True,
             )
+            st.markdown("---")
             st.info("Your feedback has been recorded.")
 
     except Exception as exc:
