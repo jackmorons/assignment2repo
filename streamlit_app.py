@@ -36,9 +36,24 @@ st.markdown(
         --danger: #e17055;
     }
 
+    /* ── Hide Streamlit chrome ────────────────────────────── */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    #MainMenu, footer, .stDeployButton {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
     /* ── Global overrides ────────────────────────────────── */
     .stApp {
-        background: linear-gradient(160deg, var(--bg-dark) 0%, #1a1a2e 50%, #16213e 100%);
+        background:
+            radial-gradient(ellipse 80% 60% at 15% 20%,  rgba(108, 99, 255, 0.18) 0%, transparent 70%),
+            radial-gradient(ellipse 70% 80% at 85% 75%,  rgba(0, 206, 201, 0.14) 0%, transparent 65%),
+            radial-gradient(ellipse 90% 50% at 50% 50%,  rgba(162, 155, 254, 0.10) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 70% at 75% 15%,  rgba(253, 203, 110, 0.08) 0%, transparent 55%),
+            radial-gradient(ellipse 50% 90% at 25% 85%,  rgba(0, 184, 148, 0.10) 0%, transparent 60%),
+            #0f0f1a;
         font-family: 'Inter', sans-serif;
     }
 
