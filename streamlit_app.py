@@ -221,7 +221,7 @@ def _stars(rating: int) -> str:
 
 
 # ── Header ──────────────────────────────────────────────────────────
-st.markdown("# 📝 Feedback Form")
+st.markdown("#Feedback Form")
 st.markdown(
     "<p style='margin-top:-0.8rem; font-size:0.95rem;'>"
     "We value your feedback — let us know how we're doing!</p>",
