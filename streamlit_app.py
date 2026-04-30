@@ -453,3 +453,69 @@ with tab2:
         )
 
         st.plotly_chart(fig_reg, use_container_width=True)
+
+        st.write("Finally, we compute the average based on these regressions to refer to a single standard.")
+        st.write("Using the regression model, we can calculate the predicted number of repetitions for each set.")
+
+        # ── Calculate mean regression ─────────────────────────────
+        mean_y_smooth = np.zeros(len(x_smooth))
+
+        for idx, row_label in enumerate(melted["Progression"].unique()):
+            subset = melted[melted["Progression"] == row_label]
+            x_pts = subset["Step"].values.astype(float)
+            y_pts = subset["Value"].values.astype(float)
+
+            # Fit degree-2 polynomial: ax² + bx + c
+            coeffs = np.polyfit(x_pts, y_pts, 2)
+            y_smooth = np.polyval(coeffs, x_smooth)
+
+            mean_y_smooth += y_smooth
+
+        # Average curve
+        mean_y_smooth /= len(melted["Progression"].unique())
+
+        # ── Plot mean regression ─────────────────────────────────────
+        fig_mean = go.Figure()
+
+        # Add original data points (scatter, no trace per row)
+        fig_mean.add_trace(go.Scatter(
+            x=melted["Step"].astype(float),
+            y=melted["Value"].astype(float),
+            mode="markers",
+            marker=dict(
+                size=6,
+                color="rgba(150,150,255,0.7)",
+                line=dict(width=1, color="white")
+            ),
+            name="All subjects"
+        ))
+
+        # Add mean regression curve
+        fig_mean.add_trace(go.Scatter(
+            x=x_smooth,
+            y=mean_y_smooth,
+            mode="lines",
+            line=dict(color="white", width=3, dash="dash"),
+            name="Mean regression"
+        ))
+
+        fig_mean.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif"),
+            title="Mean Fatigue Curve (Quadratic Regression)",
+            title_font_size=18,
+            margin=dict(t=50, b=30),
+            xaxis=dict(dtick=1, title="Set"),
+            yaxis=dict(title="Repetitions"),
+        )
+
+        st.plotly_chart(fig_mean, use_container_width=True)
+
+        st.write("This curve is the single reference for fatigue prediction.")
+        st.write("From this, we can calculate the predicted number of repetitions for each set.")
+
+        
+        
+        
