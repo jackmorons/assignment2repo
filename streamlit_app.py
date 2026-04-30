@@ -336,7 +336,7 @@ with tab2:
     # import the sheet
     GOOGLE_SHEET_CSV_URL = (
         "https://docs.google.com/spreadsheets/d/"
-        "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/export?format=csv"
+        "1eWItYgh2UWjA94bXWqOpRkEUkh3gZVG80O00NeubMo0/export?format=csv"
     )
 
     @st.cache_data(ttl=300)
