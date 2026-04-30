@@ -360,13 +360,15 @@ with tab2:
 
     exp = st.expander("📊 Show data", expanded=True)
 
-    st.write("What am I looking at? 👇")
-    st.write("We have asked a number of subjects to perform a benching test: 5 sets, 5 minutes rests, 80% of their 1RM, all to absolute failure.")
-    st.write("The table below shows the number of repetitions performed in each set.")
-    st.write("Each row corresponds to a subject and each column corresponds to a set.")
-    st.write("The idea is capturing the mathematical trend of fatigue, to understand how fixed RPE sets could be developed educing reps over series to maintain fatigue.")
-
+    
     with exp:
+
+        st.write("What am I looking at? 👇")
+        st.write("We have asked a number of subjects to perform a benching test: 5 sets, 5 minutes rests, 80% of their 1RM, all to absolute failure.")
+        st.write("The table below shows the number of repetitions performed in each set.")
+        st.write("Each row corresponds to a subject and each column corresponds to a set.")
+        st.write("The idea is capturing the mathematical trend of fatigue, to understand how fixed RPE sets could be developed educing reps over series to maintain fatigue.")
+
         fig = px.scatter(
             melted,
             x="Step",
