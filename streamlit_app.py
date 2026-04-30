@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 st.set_page_config(
     page_title="Feedback Form",
     page_icon="📝",
-    #layout="centered",
+    layout="wide",
 )
 
 # ── Custom CSS styling ──────────────────────────────────────────────
