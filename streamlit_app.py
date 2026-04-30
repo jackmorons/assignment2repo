@@ -1,11 +1,6 @@
-"""
-Streamlit Feedback Form Application
-====================================
-A styled feedback form with conditional messaging,
-custom CSS theming, and input validation.
-"""
-
 import streamlit as st
+import pandas as pd
+import plotly.express as px
 
 # ── Page configuration ──────────────────────────────────────────────
 st.set_page_config(
@@ -214,126 +209,182 @@ st.markdown(
 )
 
 
-# ── Helper: render stars from rating ────────────────────────────────
 def _stars(rating: int) -> str:
-    """Return a string of filled and empty star emojis."""
     return "★" * rating + "☆" * (5 - rating)
 
+tab1, tab2 = st.tabs(["Feedback Form", "Google Sheet Expander"])
 
-# ── Header ──────────────────────────────────────────────────────────
-st.markdown("# Feedback Form")
-st.markdown(
-    "<p style='color:#8888a0; margin-top:-0.8rem; font-size:0.95rem;'>"
-    "We value your feedback — let us know how we're doing!</p>",
-    unsafe_allow_html=True,
-)
-
-# ── Form ────────────────────────────────────────────────────────────
-with st.form(key="feedback_form"):
-    name = st.text_input(
-        "Your name",
-        placeholder="e.g. John Smith",
-        max_chars=100,
+with tab1:
+    # ── Header ──────────────────────────────────────────────────────────
+    st.markdown("# Feedback Form")
+    st.markdown(
+        "<p style='color:#8888a0; margin-top:-0.8rem; font-size:0.95rem;'>"
+        "We value your feedback — let us know how we're doing!</p>",
+        unsafe_allow_html=True,
     )
 
-    rating = st.slider(
-        "How satisfied are you?",
-        min_value=1,
-        max_value=5,
-        value=3,
-        help="1 = Very Unsatisfied · 5 = Very Satisfied",
-    )
-
-    comments = st.text_area(
-        "Additional comments (optional)",
-        placeholder="Tell us more about your experience…",
-        max_chars=1000,
-        height=120,
-    )
-
-    submitted = st.form_submit_button("Submit Feedback")
-
-# ── Post-submission logic ───────────────────────────────────────────
-if submitted:
-    # ── Validation ──────────────────────────────────────────────────
-    try:
-        stripped_name = name.strip()
-
-        if not stripped_name:
-            st.error("⚠️ Please enter your name before submitting.")
-            st.stop()
-
-        if not stripped_name.replace(" ", "").isalpha():
-            st.error("⚠️ Name should contain only letters and spaces.")
-            st.stop()
-
-        # Sanitise comments (strip leading/trailing whitespace)
-        clean_comments = comments.strip() if comments else ""
-
-        # ── Display submitted data ──────────────────────────────────
-        st.markdown("### 🎉 Thank you for your feedback!")
-
-        st.markdown(
-            f"""
-            <div class="result-card">
-                <h4>Your Submission</h4>
-                <p><span class="label">Name:</span> {stripped_name}</p>
-                <p><span class="label">Rating:</span>
-                   <span class="stars">{_stars(rating)}</span>
-                   &nbsp;({rating}/5)
-                </p>
-                <p><span class="label">Comments:</span>
-                   {clean_comments if clean_comments else '<em style="color:#8888a0;">No comments provided.</em>'}
-                </p>
-            </div>
-            """,
-            unsafe_allow_html=True,
+    # ── Form ────────────────────────────────────────────────────────────
+    with st.form(key="feedback_form"):
+        name = st.text_input(
+            "Your name",
+            placeholder="e.g. John Smith",
+            max_chars=100,
         )
 
-        # Also display via st.write() as required by the assignment
-        st.write("---")
-        st.write(f"**Name:** {stripped_name}")
-        st.write(f"**Rating:** {rating} / 5")
-        st.write(f"**Comments:** {clean_comments if clean_comments else '—'}")
+        rating = st.slider(
+            "How satisfied are you?",
+            min_value=1,
+            max_value=5,
+            value=3,
+            help="1 = Very Unsatisfied · 5 = Very Satisfied",
+        )
 
-        # ── Conditional messages ────────────────────────────────────
-        if rating <= 2:
+        comments = st.text_area(
+            "Additional comments (optional)",
+            placeholder="Tell us more about your experience…",
+            max_chars=1000,
+            height=120,
+        )
+
+        submitted = st.form_submit_button("Submit Feedback")
+
+    # ── Post-submission logic ───────────────────────────────────────────
+    if submitted:
+        # ── Validation ──────────────────────────────────────────────────
+        try:
+            stripped_name = name.strip()
+
+            if not stripped_name:
+                st.error("⚠️ Please enter your name before submitting.")
+                st.stop()
+
+            if not stripped_name.replace(" ", "").isalpha():
+                st.error("⚠️ Name should contain only letters and spaces.")
+                st.stop()
+
+            clean_comments = comments.strip() if comments else ""
+
+            # ── Display submitted data ──────────────────────────────────
+            st.markdown("### 🎉 Thank you for your feedback!")
+
             st.markdown(
-                '<div class="alert-box alert-warning">'
-                "We're sorry to hear that. We'll work hard to improve your experience!"
-                "</div>",
+                f"""
+                <div class="result-card">
+                    <h4>Your Submission</h4>
+                    <p><span class="label">Name:</span> {stripped_name}</p>
+                    <p><span class="label">Rating:</span>
+                    <span class="stars">{_stars(rating)}</span>
+                    &nbsp;({rating}/5)
+                    </p>
+                    <p><span class="label">Comments:</span>
+                    {clean_comments if clean_comments else '<em style="color:#8888a0;">No comments provided.</em>'}
+                    </p>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
-            st.markdown("---")
-            st.warning(
-                "Your satisfaction score is low. "
-                "We are working on it."
-            )
-        elif rating >= 4:
-            st.markdown(
-                '<div class="alert-box alert-success">'
-                "Awesome! We're thrilled you had a great experience!"
-                "</div>",
-                unsafe_allow_html=True,
-            )
-            st.markdown("---")
-            st.success("Thank you for the positive feedback! 🙌")
+
+            st.write("---")
+            st.write(f"**Name:** {stripped_name}")
+            st.write(f"**Rating:** {rating} / 5")
+            st.write(f"**Comments:** {clean_comments if clean_comments else '—'}")
+
+            # ── Conditional messages ────────────────────────────────────
+            if rating <= 2:
+                st.markdown(
+                    '<div class="alert-box alert-warning">'
+                    "We're sorry to hear that. We'll work hard to improve your experience!"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown("---")
+                st.warning(
+                    "Your satisfaction score is low. "
+                    "We are working on it."
+                )
+            elif rating >= 4:
+                st.markdown(
+                    '<div class="alert-box alert-success">'
+                    "Awesome! We're thrilled you had a great experience!"
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown("---")
+                st.success("Thank you for the positive feedback! 🙌")
+            else:
+                # rating == 3  →  neutral acknowledgement
+                st.markdown(
+                    '<div class="alert-box alert-neutral">'
+                    "Thanks for sharing. We'd love to know how we can do even better."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+                st.markdown("---")
+                st.info("Your feedback has been recorded.")
+
+        except Exception as exc:
+            st.error(f"An unexpected error occurred: {exc}")
+
+    # ── Footer ──────────────────────────────────────────────────────────
+    st.markdown(
+        '<p class="footer">Built with Streamlit · © 2026</p>',
+        unsafe_allow_html=True,
+    )
+
+with tab2:
+
+    # import the sheet
+    GOOGLE_SHEET_CSV_URL = (
+        "https://docs.google.com/spreadsheets/d/"
+        "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms/export?format=csv"
+    )
+
+    @st.cache_data(ttl=300)
+    def load_sheet_data(url: str) -> pd.DataFrame:
+        df = pd.read_csv(url)
+        return df
+
+    df = load_sheet_data(GOOGLE_SHEET_CSV_URL)
+
+    exp = st.expander("📊 Show data", expanded=True)
+
+    with exp:
+        # ── Column selectors ─────────────────────────────────────────
+        numeric_cols = df.select_dtypes(include="number").columns.tolist()
+        all_cols = df.columns.tolist()
+
+        if len(numeric_cols) < 2:
+            st.warning("The dataset needs at least two numeric columns for a scatter plot.")
+            st.dataframe(df, use_container_width=True)
         else:
-            # rating == 3  →  neutral acknowledgement
-            st.markdown(
-                '<div class="alert-box alert-neutral">'
-                "Thanks for sharing. We'd love to know how we can do even better."
-                "</div>",
-                unsafe_allow_html=True,
+            c1, c2, c3 = st.columns(3)
+            x_col = c1.selectbox("X axis", numeric_cols, index=0)
+            y_col = c2.selectbox("Y axis", numeric_cols, index=min(1, len(numeric_cols) - 1))
+
+            # Optional color dimension
+            color_col = c3.selectbox("Color by", ["None"] + all_cols, index=0)
+            color_val = None if color_col == "None" else color_col
+
+            fig = px.scatter(
+                df,
+                x=x_col,
+                y=y_col,
+                color=color_val,
+                template="plotly_dark",
+                title=f"{y_col}  vs  {x_col}",
+                opacity=0.8,
             )
-            st.markdown("---")
-            st.info("Your feedback has been recorded.")
+            fig.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(family="Inter, sans-serif"),
+                title_font_size=18,
+                margin=dict(t=50, b=30),
+            )
+            fig.update_traces(marker=dict(size=9, line=dict(width=1, color="rgba(255,255,255,0.3)")))
 
-    except Exception as exc:
-        st.error(f"An unexpected error occurred: {exc}")
+            st.plotly_chart(fig, use_container_width=True)
 
-# ── Footer ──────────────────────────────────────────────────────────
-st.markdown(
-    '<p class="footer">Built with Streamlit · © 2026</p>',
-    unsafe_allow_html=True,
-)
+            # ── Raw data toggle ──────────────────────────────────────
+            if st.checkbox("Show raw data table"):
+                st.dataframe(df, use_container_width=True)
