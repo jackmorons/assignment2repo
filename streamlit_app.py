@@ -360,12 +360,18 @@ with tab2:
 
     exp = st.expander("📊 Show data", expanded=True)
 
+    st.write("What am I looking at? 👇")
+    st.write("We have asked a number of subjects to perform a benching test: 5 sets, 5 minutes rests, 80% of their 1RM, all to absolute failure.")
+    st.write("The table below shows the number of repetitions performed in each set.")
+    st.write("Each row corresponds to a subject and each column corresponds to a set.")
+    st.write("The idea is capturing the mathematical trend of fatigue, to understand how fixed RPE sets could be developed educing reps over series to maintain fatigue.")
+
     with exp:
         fig = px.scatter(
             melted,
             x="Step",
             y="Value",
-            color="Progression",
+            color="Repetitions",
             template="plotly_dark",
             title="Progressions — Value vs Step",
             opacity=0.85,
@@ -376,7 +382,7 @@ with tab2:
             font=dict(family="Inter, sans-serif"),
             title_font_size=18,
             margin=dict(t=50, b=30),
-            xaxis=dict(dtick=1, title="Column Position"),
+            xaxis=dict(dtick=1, title="Series"),
             yaxis=dict(title="Value"),
         )
         fig.update_traces(
