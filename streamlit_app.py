@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import numpy as np
+import plotly.graph_objects as go
 
 # ── Page configuration ──────────────────────────────────────────────
 st.set_page_config(
@@ -396,3 +398,58 @@ with tab2:
         # ── Raw data toggle ──────────────────────────────────────
         if st.checkbox("Show raw data table"):
             st.dataframe(raw_df.drop(columns="Progression"), use_container_width=True)
+
+        st.write("The scattered data is not very clear, that is why we are going to use regression to model the trend of fatigue for each subject. A quadratic regression model is used.")
+
+        # ── Quadratic regression curves ──────────────────────────
+
+        fig_reg = go.Figure()
+        colors = px.colors.qualitative.Plotly
+
+        num_sets = len(raw_df.columns) - 1  # exclude "Progression" column
+        x_smooth = np.linspace(1, num_sets, 100)
+
+        for idx, row_label in enumerate(melted["Progression"].unique()):
+            subset = melted[melted["Progression"] == row_label]
+            x_pts = subset["Step"].values.astype(float)
+            y_pts = subset["Value"].values.astype(float)
+
+            # Fit degree-2 polynomial: ax² + bx + c
+            coeffs = np.polyfit(x_pts, y_pts, 2)
+            y_smooth = np.polyval(coeffs, x_smooth)
+
+            color = colors[idx % len(colors)]
+
+            # Original data points
+            fig_reg.add_trace(go.Scatter(
+                x=x_pts, y=y_pts,
+                mode="markers",
+                marker=dict(size=8, color=color,
+                            line=dict(width=1, color="rgba(255,255,255,0.3)")),
+                name=row_label,
+                legendgroup=row_label,
+                showlegend=True,
+            ))
+            # Smooth regression curve
+            fig_reg.add_trace(go.Scatter(
+                x=x_smooth, y=y_smooth,
+                mode="lines",
+                line=dict(color=color, width=2),
+                name=f"{row_label} fit",
+                legendgroup=row_label,
+                showlegend=False,
+            ))
+
+        fig_reg.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif"),
+            title="Quadratic Regression — Fatigue Curves",
+            title_font_size=18,
+            margin=dict(t=50, b=30),
+            xaxis=dict(dtick=1, title="Set"),
+            yaxis=dict(title="Repetitions"),
+        )
+
+        st.plotly_chart(fig_reg, use_container_width=True)
