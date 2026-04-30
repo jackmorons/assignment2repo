@@ -363,12 +363,9 @@ with tab2:
     # ── Build normalized data (each row ÷ its first-set value) ──────────
     norm_df = raw_df.copy()
     value_cols = [c for c in norm_df.columns if c != "Progression"]
-    for i in norm_df.index:
-        first_val = norm_df.loc[i, value_cols[0]]
-        if first_val and first_val != 0:
-            for c in value_cols:
-                norm_df.loc[i, c] = norm_df.loc[i, c] / first_val
-        # else leave as-is (avoid div-by-zero)
+    norm_df[value_cols] = norm_df[value_cols].astype(float)
+    first_vals = norm_df[value_cols[0]].replace(0, np.nan)
+    norm_df[value_cols] = norm_df[value_cols].div(first_vals, axis=0)
 
     melted_norm = norm_df.melt(
         id_vars="Progression",
