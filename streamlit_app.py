@@ -373,7 +373,7 @@ with tab2:
             melted,
             x="Step",
             y="Value",
-            color="Repetitions",
+            color="Progression",
             template="plotly_dark",
             title="Progressions — Value vs Step",
             opacity=0.85,
