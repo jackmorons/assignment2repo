@@ -360,9 +360,24 @@ with tab2:
         value_name="Value",
     )
 
+    # ── Build normalized data (each row ÷ its first-set value) ──────────
+    norm_df = raw_df.copy()
+    value_cols = [c for c in norm_df.columns if c != "Progression"]
+    for i in norm_df.index:
+        first_val = norm_df.loc[i, value_cols[0]]
+        if first_val and first_val != 0:
+            for c in value_cols:
+                norm_df.loc[i, c] = norm_df.loc[i, c] / first_val
+        # else leave as-is (avoid div-by-zero)
+
+    melted_norm = norm_df.melt(
+        id_vars="Progression",
+        var_name="Step",
+        value_name="Value",
+    )
+
     exp = st.expander("📊 Show data", expanded=True)
 
-    
     with exp:
 
         st.write("What am I looking at? 👇")
@@ -371,151 +386,149 @@ with tab2:
         st.write("Each row corresponds to a subject and each column corresponds to a set.")
         st.write("The idea is capturing the mathematical trend of fatigue, to understand how fixed RPE sets could be developed educing reps over series to maintain fatigue.")
 
-        fig = px.scatter(
-            melted,
-            x="Step",
-            y="Value",
-            color="Progression",
-            template="plotly_dark",
-            title="Progressions — Value vs Step",
-            opacity=0.85,
-        )
-        fig.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif"),
-            title_font_size=18,
-            margin=dict(t=50, b=30),
-            xaxis=dict(dtick=1, title="Series"),
-            yaxis=dict(title="Value"),
-        )
-        fig.update_traces(
-            marker=dict(size=10, line=dict(width=1, color="rgba(255,255,255,0.3)"))
-        )
+        col_norm, col_raw = st.columns(2)
 
-        st.plotly_chart(fig, use_container_width=True)
+        # ── Helper: build all three charts for a given melted df ──────
+        def _render_charts(
+            container,
+            m_df,
+            r_df,
+            y_label,
+            scatter_title,
+            reg_title,
+            mean_title,
+            table_key,
+        ):
+            """Render scatter → regression → mean-regression inside *container*."""
+            with container:
+                # 1) Scatter ──────────────────────────────────────────
+                fig = px.scatter(
+                    m_df,
+                    x="Step",
+                    y="Value",
+                    color="Progression",
+                    template="plotly_dark",
+                    title=scatter_title,
+                    opacity=0.85,
+                )
+                fig.update_layout(
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter, sans-serif"),
+                    title_font_size=16,
+                    margin=dict(t=50, b=30),
+                    xaxis=dict(dtick=1, title="Series"),
+                    yaxis=dict(title=y_label),
+                    legend=dict(font=dict(size=9)),
+                )
+                fig.update_traces(
+                    marker=dict(size=8, line=dict(width=1, color="rgba(255,255,255,0.3)"))
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
-        # ── Raw data toggle ──────────────────────────────────────
-        if st.checkbox("Show raw data table"):
-            st.dataframe(raw_df.drop(columns="Progression"), use_container_width=True)
+                # Raw data toggle
+                if st.checkbox("Show raw data table", key=table_key):
+                    st.dataframe(r_df.drop(columns="Progression"), use_container_width=True)
 
-        st.write("The scattered data is not very clear, that is why we are going to use regression to model the trend of fatigue for each subject. A quadratic regression model is used.")
+                # 2) Quadratic regression ─────────────────────────────
+                fig_reg = go.Figure()
+                colors = px.colors.qualitative.Plotly
+                n_sets = len(r_df.columns) - 1
+                x_smooth = np.linspace(1, n_sets, 100)
 
-        # ── Quadratic regression curves ──────────────────────────
+                for idx, row_label in enumerate(m_df["Progression"].unique()):
+                    subset = m_df[m_df["Progression"] == row_label]
+                    x_pts = subset["Step"].values.astype(float)
+                    y_pts = subset["Value"].values.astype(float)
 
-        fig_reg = go.Figure()
-        colors = px.colors.qualitative.Plotly
+                    coeffs = np.polyfit(x_pts, y_pts, 2)
+                    y_smooth = np.polyval(coeffs, x_smooth)
+                    color = colors[idx % len(colors)]
 
-        num_sets = len(raw_df.columns) - 1  # exclude "Progression" column
-        x_smooth = np.linspace(1, num_sets, 100)
+                    fig_reg.add_trace(go.Scatter(
+                        x=x_pts, y=y_pts, mode="markers",
+                        marker=dict(size=7, color=color,
+                                    line=dict(width=1, color="rgba(255,255,255,0.3)")),
+                        name=row_label, legendgroup=row_label, showlegend=True,
+                    ))
+                    fig_reg.add_trace(go.Scatter(
+                        x=x_smooth, y=y_smooth, mode="lines",
+                        line=dict(color=color, width=2),
+                        name=f"{row_label} fit", legendgroup=row_label, showlegend=False,
+                    ))
 
-        for idx, row_label in enumerate(melted["Progression"].unique()):
-            subset = melted[melted["Progression"] == row_label]
-            x_pts = subset["Step"].values.astype(float)
-            y_pts = subset["Value"].values.astype(float)
+                fig_reg.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter, sans-serif"),
+                    title=reg_title, title_font_size=16,
+                    margin=dict(t=50, b=30),
+                    xaxis=dict(dtick=1, title="Set"),
+                    yaxis=dict(title=y_label),
+                    legend=dict(font=dict(size=9)),
+                )
+                st.plotly_chart(fig_reg, use_container_width=True)
 
-            # Fit degree-2 polynomial: ax² + bx + c
-            coeffs = np.polyfit(x_pts, y_pts, 2)
-            y_smooth = np.polyval(coeffs, x_smooth)
+                # 3) Mean regression ──────────────────────────────────
+                mean_y = np.zeros(len(x_smooth))
+                for row_label in m_df["Progression"].unique():
+                    subset = m_df[m_df["Progression"] == row_label]
+                    x_pts = subset["Step"].values.astype(float)
+                    y_pts = subset["Value"].values.astype(float)
+                    coeffs = np.polyfit(x_pts, y_pts, 2)
+                    mean_y += np.polyval(coeffs, x_smooth)
+                mean_y /= len(m_df["Progression"].unique())
 
-            color = colors[idx % len(colors)]
+                fig_mean = go.Figure()
+                fig_mean.add_trace(go.Scatter(
+                    x=m_df["Step"].astype(float), y=m_df["Value"].astype(float),
+                    mode="markers",
+                    marker=dict(size=5, color="rgba(150,150,255,0.7)",
+                                line=dict(width=1, color="white")),
+                    name="All subjects",
+                ))
+                fig_mean.add_trace(go.Scatter(
+                    x=x_smooth, y=mean_y, mode="lines",
+                    line=dict(color="white", width=3, dash="dash"),
+                    name="Mean regression",
+                ))
+                fig_mean.update_layout(
+                    template="plotly_dark",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    font=dict(family="Inter, sans-serif"),
+                    title=mean_title, title_font_size=16,
+                    margin=dict(t=50, b=30),
+                    xaxis=dict(dtick=1, title="Set"),
+                    yaxis=dict(title=y_label),
+                )
+                st.plotly_chart(fig_mean, use_container_width=True)
 
-            # Original data points
-            fig_reg.add_trace(go.Scatter(
-                x=x_pts, y=y_pts,
-                mode="markers",
-                marker=dict(size=8, color=color,
-                            line=dict(width=1, color="rgba(255,255,255,0.3)")),
-                name=row_label,
-                legendgroup=row_label,
-                showlegend=True,
-            ))
-            # Smooth regression curve
-            fig_reg.add_trace(go.Scatter(
-                x=x_smooth, y=y_smooth,
-                mode="lines",
-                line=dict(color=color, width=2),
-                name=f"{row_label} fit",
-                legendgroup=row_label,
-                showlegend=False,
-            ))
-
-        fig_reg.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif"),
-            title="Quadratic Regression — Fatigue Curves",
-            title_font_size=18,
-            margin=dict(t=50, b=30),
-            xaxis=dict(dtick=1, title="Set"),
-            yaxis=dict(title="Repetitions"),
-        )
-
-        st.plotly_chart(fig_reg, use_container_width=True)
-
-        st.write("Finally, we compute the average based on these regressions to refer to a single standard.")
-        st.write("Using the regression model, we can calculate the predicted number of repetitions for each set.")
-
-        # ── Calculate mean regression ─────────────────────────────
-        mean_y_smooth = np.zeros(len(x_smooth))
-
-        for idx, row_label in enumerate(melted["Progression"].unique()):
-            subset = melted[melted["Progression"] == row_label]
-            x_pts = subset["Step"].values.astype(float)
-            y_pts = subset["Value"].values.astype(float)
-
-            # Fit degree-2 polynomial: ax² + bx + c
-            coeffs = np.polyfit(x_pts, y_pts, 2)
-            y_smooth = np.polyval(coeffs, x_smooth)
-
-            mean_y_smooth += y_smooth
-
-        # Average curve
-        mean_y_smooth /= len(melted["Progression"].unique())
-
-        # ── Plot mean regression ─────────────────────────────────────
-        fig_mean = go.Figure()
-
-        # Add original data points (scatter, no trace per row)
-        fig_mean.add_trace(go.Scatter(
-            x=melted["Step"].astype(float),
-            y=melted["Value"].astype(float),
-            mode="markers",
-            marker=dict(
-                size=6,
-                color="rgba(150,150,255,0.7)",
-                line=dict(width=1, color="white")
-            ),
-            name="All subjects"
-        ))
-
-        # Add mean regression curve
-        fig_mean.add_trace(go.Scatter(
-            x=x_smooth,
-            y=mean_y_smooth,
-            mode="lines",
-            line=dict(color="white", width=3, dash="dash"),
-            name="Mean regression"
-        ))
-
-        fig_mean.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(family="Inter, sans-serif"),
-            title="Mean Fatigue Curve (Quadratic Regression)",
-            title_font_size=18,
-            margin=dict(t=50, b=30),
-            xaxis=dict(dtick=1, title="Set"),
-            yaxis=dict(title="Repetitions"),
+        # ── Left column: Normalized ──────────────────────────────────
+        with col_norm:
+            st.markdown("#### Normalized (÷ first set)")
+        _render_charts(
+            col_norm, melted_norm, norm_df,
+            y_label="Fraction of Set 1",
+            scatter_title="Normalized — Value vs Step",
+            reg_title="Normalized — Fatigue Curves",
+            mean_title="Normalized — Mean Fatigue Curve",
+            table_key="table_norm",
         )
 
-        st.plotly_chart(fig_mean, use_container_width=True)
+        # ── Right column: Absolute (current) ─────────────────────────
+        with col_raw:
+            st.markdown("#### Absolute (raw reps)")
+        _render_charts(
+            col_raw, melted, raw_df,
+            y_label="Repetitions",
+            scatter_title="Absolute — Value vs Step",
+            reg_title="Absolute — Fatigue Curves",
+            mean_title="Absolute — Mean Fatigue Curve",
+            table_key="table_raw",
+        )
 
-        st.write("This curve is the single reference for fatigue prediction.")
-        st.write("From this, we can calculate the predicted number of repetitions for each set.")
+        st.write("The left column normalizes every subject's reps by their first-set count (so set 1 = 1.0), revealing the universal fatigue *shape*. The right column shows the original absolute rep counts.")
+        st.write("From the mean curves we can derive a single fatigue-decay reference for fixed-RPE set programming.")
 
-        
-        
-        
