@@ -341,50 +341,50 @@ with tab2:
 
     @st.cache_data(ttl=300)
     def load_sheet_data(url: str) -> pd.DataFrame:
-        df = pd.read_csv(url)
+        # Sheet has no header row — each row is a progression of values
+        df = pd.read_csv(url, header=None)
         return df
 
-    df = load_sheet_data(GOOGLE_SHEET_CSV_URL)
+    raw_df = load_sheet_data(GOOGLE_SHEET_CSV_URL)
+
+    # ── Melt: turn each cell into (column_position, value, row_label) ──
+    # Columns become 1-indexed positions; each row is a separate series
+    raw_df.columns = [i + 1 for i in range(len(raw_df.columns))]
+    raw_df["Progression"] = [f"Row {i + 1}" for i in range(len(raw_df))]
+
+    melted = raw_df.melt(
+        id_vars="Progression",
+        var_name="Step",
+        value_name="Value",
+    )
 
     exp = st.expander("📊 Show data", expanded=True)
 
     with exp:
-        # ── Column selectors ─────────────────────────────────────────
-        numeric_cols = df.select_dtypes(include="number").columns.tolist()
-        all_cols = df.columns.tolist()
+        fig = px.scatter(
+            melted,
+            x="Step",
+            y="Value",
+            color="Progression",
+            template="plotly_dark",
+            title="Progressions — Value vs Step",
+            opacity=0.85,
+        )
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font=dict(family="Inter, sans-serif"),
+            title_font_size=18,
+            margin=dict(t=50, b=30),
+            xaxis=dict(dtick=1, title="Column Position"),
+            yaxis=dict(title="Value"),
+        )
+        fig.update_traces(
+            marker=dict(size=10, line=dict(width=1, color="rgba(255,255,255,0.3)"))
+        )
 
-        if len(numeric_cols) < 2:
-            st.warning("The dataset needs at least two numeric columns for a scatter plot.")
-            st.dataframe(df, use_container_width=True)
-        else:
-            c1, c2, c3 = st.columns(3)
-            x_col = c1.selectbox("X axis", numeric_cols, index=0)
-            y_col = c2.selectbox("Y axis", numeric_cols, index=min(1, len(numeric_cols) - 1))
+        st.plotly_chart(fig, use_container_width=True)
 
-            # Optional color dimension
-            color_col = c3.selectbox("Color by", ["None"] + all_cols, index=0)
-            color_val = None if color_col == "None" else color_col
-
-            fig = px.scatter(
-                df,
-                x=x_col,
-                y=y_col,
-                color=color_val,
-                template="plotly_dark",
-                title=f"{y_col}  vs  {x_col}",
-                opacity=0.8,
-            )
-            fig.update_layout(
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-                font=dict(family="Inter, sans-serif"),
-                title_font_size=18,
-                margin=dict(t=50, b=30),
-            )
-            fig.update_traces(marker=dict(size=9, line=dict(width=1, color="rgba(255,255,255,0.3)")))
-
-            st.plotly_chart(fig, use_container_width=True)
-
-            # ── Raw data toggle ──────────────────────────────────────
-            if st.checkbox("Show raw data table"):
-                st.dataframe(df, use_container_width=True)
+        # ── Raw data toggle ──────────────────────────────────────
+        if st.checkbox("Show raw data table"):
+            st.dataframe(raw_df.drop(columns="Progression"), use_container_width=True)
